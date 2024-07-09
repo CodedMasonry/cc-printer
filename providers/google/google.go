@@ -1,7 +1,9 @@
 package google
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -9,11 +11,13 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/CodedMasonry/cc-printer/common"
+	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
@@ -21,7 +25,9 @@ import (
 )
 
 type GoogleProvider struct {
-	srv *gmail.Service
+	srv            *gmail.Service
+	deletePrinted  bool
+	allowedSenders []string
 }
 
 // Google cloud project info, include at compile time
@@ -32,7 +38,15 @@ var (
 	GoogleCallbackURL  = "/auth/callback/google"
 )
 
-func AuthenticateUser() *GoogleProvider {
+func InitProvider(deletePrinted bool, allowedSenders []string) *GoogleProvider {
+	return &GoogleProvider{
+		srv:            AuthenticateUser(),
+		deletePrinted:  deletePrinted,
+		allowedSenders: allowedSenders,
+	}
+}
+
+func AuthenticateUser() *gmail.Service {
 	if GoogleClientID == "" || GoogleClientSecret == "" {
 		panic("Google provider credentials not included; include during compile time")
 	}
@@ -55,9 +69,7 @@ func AuthenticateUser() *GoogleProvider {
 		log.Fatalf("Unable to retrieve Gmail client: %v", err)
 	}
 
-	return &GoogleProvider{
-		srv: srv,
-	}
+	return srv
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
@@ -65,7 +77,7 @@ func getClient(config *oauth2.Config) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
-	tokFile := "token.json"
+	tokFile := filepath.Join(common.ConfigDir, "token.json")
 	tok, err := tokenFromFile(tokFile)
 	if err != nil {
 		tok = getTokenFromWeb(config)
@@ -91,6 +103,49 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 		log.Fatalf("Unable to retrieve token from web: %v", err)
 	}
 	return tok
+}
+
+// Retrieves a token from a local file.
+func tokenFromFile(file string) (*oauth2.Token, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		log.Fatal("unable to read token file", err)
+	}
+
+	encrypted := make([]byte, info.Size())
+	_, err = f.Read(encrypted)
+	if err != nil {
+		log.Fatal("Unable to read", err)
+	}
+
+	decrypted := decryptBytes(encrypted)
+	tok := &oauth2.Token{}
+	err = json.NewDecoder(bytes.NewReader(decrypted)).Decode(tok)
+	return tok, err
+}
+
+// Saves a token to a file path.
+func saveToken(path string, token *oauth2.Token) {
+	fmt.Printf("Saving credential file to: %s\n", path)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		log.Fatalf("Unable to cache oauth token: %v", err)
+	}
+	defer f.Close()
+
+	bytes, err := json.Marshal(token)
+	if err != nil {
+		log.Fatalf("Unable to encode token: %v", err)
+	}
+
+	encrypted := encryptBytes(bytes)
+	f.Write(encrypted)
 }
 
 func authInput(quit chan bool, result chan string) {
@@ -132,27 +187,37 @@ func authCallback(quit chan bool, result chan string) {
 	}
 }
 
-// Retrieves a token from a local file.
-func tokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
+func encryptBytes(msg []byte) []byte {
+	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
 	if err != nil {
-		return nil, err
+		log.Panic(err)
 	}
-	defer f.Close()
-	tok := &oauth2.Token{}
-	err = json.NewDecoder(f).Decode(tok)
-	return tok, err
+
+	nonce := make([]byte, aead.NonceSize(), aead.NonceSize()+len(msg)+aead.Overhead())
+	if _, err := rand.Read(nonce); err != nil {
+		log.Panic(err)
+	}
+
+	return aead.Seal(nonce, nonce, msg, nil)
 }
 
-// Saves a token to a file path.
-func saveToken(path string, token *oauth2.Token) {
-	fmt.Printf("Saving credential file to: %s\n", path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+func decryptBytes(encrypted []byte) []byte {
+	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		log.Panic(err)
 	}
-	defer f.Close()
-	json.NewEncoder(f).Encode(token)
+
+	if len(encrypted) < aead.NonceSize() {
+		log.Panic("Ciphertext too short")
+	}
+
+	nonce, ciphertext := encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():]
+
+	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		log.Panic(err)
+	}
+	return plaintext
 }
 
 func (p GoogleProvider) GetAttachments(after time.Time) []*os.File {
