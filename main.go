@@ -16,22 +16,24 @@ import (
 
 // Config for the printer
 type Config struct {
-	// Only prints files from Allowed Senders
+	// AllowedSenders specifies only to prints files from Allowed Senders
 	AllowedSenders []string
 	// DeletePrinted specifies whether the email should be deleted after processing
 	DeletePrinted bool
-	// The printer to use; set to default to use default
+	// Printer is the printer to use; set to default to use default
 	Printer string
-	// The flags to pass to CUPS (lp) command during printing
+	// PrintFlags are the flags to pass to CUPS (lp) command during printing
 	PrintFlags []string
-	// The provider used to pull emails from
+	// Provider used to pull emails from
 	Provider string
 	// Whether to reset state & config on launch
 	Reset bool
 }
 
 type State struct {
+	// lastFetch Last time the code fetched 
 	lastFetch     time.Time
+	// The encryption key stored in byte array
 	EncryptionKey []byte
 }
 
