@@ -4,14 +4,18 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/CodedMasonry/cc-printer/common"
 	"github.com/CodedMasonry/cc-printer/providers"
+	"github.com/CodedMasonry/cc-printer/providers/google"
 	"github.com/adrg/xdg"
-	"go.uber.org/zap"
 )
 
 // Config for the printer
@@ -31,38 +35,32 @@ type Config struct {
 }
 
 type State struct {
-	// lastFetch Last time the code fetched 
-	lastFetch     time.Time
+	// lastFetch Last time the code fetched
+	lastFetch time.Time
 	// The encryption key stored in byte array
 	EncryptionKey []byte
 }
 
 var (
-	configDir    = xdg.DataHome
+	configDir    = filepath.Join(xdg.DataHome, "cc-printer")
 	GlobalConfig *Config
 	GlobalState  *State
-	// When building to production set to true during compile time
-	IsProduction = false
-	Logger       *zap.SugaredLogger
 )
 
 func main() {
-	lgr, _ := zap.NewDevelopment()
-	defer lgr.Sync()
-	Logger = lgr.Sugar()
-
+	common.InitLogging()
 	GlobalConfig = fetchConfig()
 	GlobalState = fetchState()
 
 	GlobalConfig.SaveToFile()
 	defer GlobalState.SaveToFile()
 
-	provider := providers.ProviderList[GlobalConfig.Provider]
-	for {
-		result := provider.GetAttachments(GlobalState.lastFetch)
-		for _, file := range result {
-			fmt.Printf("Attachment: %v\n", file.Name())
-		}
+	slog.Info("State successfully initialized", "ConfigDir", configDir)
+
+	provider := fetchProvider(GlobalConfig.Provider)
+	result := provider.GetAttachments(GlobalState.lastFetch)
+	for _, file := range result {
+		slog.Info("Attachment Downloaded", "file", file.Name())
 	}
 }
 
@@ -75,7 +73,7 @@ func fetchConfig() *Config {
 	var config *Config
 	err = json.Unmarshal(byt, &config)
 	if err != nil {
-		Logger.Panicf("Unable to read config: %v\nPlease delete config if issue persists", err)
+		log.Fatalf("Unable to read config: %v\nPlease delete config if issue persists", err)
 	}
 
 	return config
@@ -91,8 +89,8 @@ func initConfig() *Config {
 		Reset:          false,
 	}
 	for {
-		conf.AllowedSenders = append(conf.AllowedSenders, promptString("Add Allowed Sender"))
-		if !promptBool("Add Another Sender?", false) {
+		conf.AllowedSenders = append(conf.AllowedSenders, promptString("Allowed Sender"))
+		if !promptBool("Add Another?", false) {
 			break
 		}
 	}
@@ -100,7 +98,7 @@ func initConfig() *Config {
 	if !promptBool("Use default printer?", true) {
 		conf.Printer = promptString("What printer do you want to use?")
 	}
-	if promptBool("Add Print flags (Using `lp` flags)", false) {
+	if promptBool("Add Print flags (Using `lp` flags)?", false) {
 		for {
 			conf.PrintFlags = append(conf.PrintFlags, promptString("Add flag"))
 			if !promptBool("Add Another", true) {
@@ -109,14 +107,14 @@ func initConfig() *Config {
 		}
 	}
 
-	fmt.Printf("Choose an email provider")
-	for _, key := range providers.ProviderList {
-		fmt.Printf("\t- %s", key)
-	}
-
 	for {
+		fmt.Printf("\nChoose an email provider")
+		for _, key := range providers.ProviderList {
+			fmt.Printf("\n\t- %s", key)
+		}
+
 		provider := strings.ToLower(promptString("Provider"))
-		if _, ok := providers.ProviderList[provider]; ok {
+		if slices.Contains(providers.ProviderList, provider) {
 			conf.Provider = provider
 			break
 		}
@@ -126,36 +124,37 @@ func initConfig() *Config {
 }
 
 func (c *Config) SaveToFile() {
+	os.MkdirAll(configDir, 0755)
 	file, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		Logger.Error("Unable to save config: ", err)
+		slog.Error("Unable to save config", "error", err)
 		return
 	}
 
 	data, err := json.Marshal(c)
 	if err != nil {
-		Logger.DPanicf("Unable to serialize config: ", err)
+		log.Fatal("Unable to serialize config: ", "error", err)
 	}
 
 	if _, err = file.Write(data); err != nil {
-		Logger.Error("Failed to write config to file: ", err)
+		slog.Error("Failed to write config to file", "error", err)
 	}
 }
 
 func (s *State) SaveToFile() {
 	file, err := os.OpenFile(filepath.Join(configDir, "state.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		Logger.Warn("Unable to save state: ", err)
+		slog.Warn("Unable to save state", "error", err)
 		return
 	}
 
 	data, err := json.Marshal(s)
 	if err != nil {
-		Logger.DPanic("Unable to serialize config: ", err)
+		log.Fatal("Unable to serialize config: ", err)
 	}
 
 	if _, err = file.Write(data); err != nil {
-		Logger.Error("Failed to write state to file: ", err)
+		slog.Error("Failed to write state to file", "error", err)
 	}
 }
 
@@ -168,7 +167,7 @@ func fetchState() *State {
 	var state *State
 	err = json.Unmarshal(byt, &state)
 	if err != nil {
-		Logger.Warn("Unable to read state, resetting state\n")
+		slog.Warn("Unable to read state, resetting state")
 		state = initState()
 	}
 
@@ -185,17 +184,28 @@ func initState() *State {
 func genEncryptionKey() []byte {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		Logger.Panicf("Unable to generate an encryption key: %v", err)
+		log.Fatal("Unable to generate an encryption key: ", err)
 	}
 	return bytes
+}
+
+func fetchProvider(provider string) providers.Provider {
+	switch provider {
+	case "google":
+		return google.AuthenticateUser()
+	default:
+		log.Fatal("Unknown or Unsupported provider: ", provider)
+	}
+
+	panic("Unreachable")
 }
 
 func promptString(msg string) string {
 	fmt.Printf("\n%v: ", msg)
 
 	var str string
-	if _, err := fmt.Scan(&str); err != nil {
-		Logger.Error("Unable to read input: ", err)
+	if _, err := fmt.Scanln(&str); err != nil && err.Error() != "unexpected newline" {
+		log.Fatal("Unable to read user input: ", err)
 	}
 	return strings.TrimSpace(str)
 }
@@ -208,8 +218,8 @@ func promptBool(msg string, defaultTrue bool) bool {
 	}
 
 	var str string
-	if _, err := fmt.Scan(&str); err != nil {
-		Logger.Error("Unable to read input: ", err)
+	if _, err := fmt.Scanln(&str); err != nil && err.Error() != "unexpected newline" {
+		log.Fatal("Unable to read user input: ", err)
 	}
 
 	str = strings.ToLower(str)

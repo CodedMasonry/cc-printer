@@ -3,8 +3,6 @@ package providers
 import (
 	"os"
 	"time"
-
-	"github.com/CodedMasonry/cc-printer/providers/google"
 )
 
 type Provider interface {
@@ -13,6 +11,6 @@ type Provider interface {
 	GetAttachments(time.Time) []*os.File
 }
 
-var ProviderList = map[string]Provider {
-	"google": google.AuthenticateUser(),
+var ProviderList = []string {
+	"google",
 }

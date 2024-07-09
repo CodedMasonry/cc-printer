@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+cc-printer
 
 # Test binary, built with `go test -c`
 *.test
@@ -23,3 +24,4 @@ go.work.sum
 
 # Certain providers require credentials, exclude sensitive
 *.json
+.env
