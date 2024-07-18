@@ -137,8 +137,18 @@ func FetchState() *State {
 
 func initState() *State {
 	return &State{
-		LastFetch:     time.Time{},
+		LastFetch:     time.Unix(1,0),
 		EncryptionKey: genEncryptionKey(),
+	}
+}
+
+func DeleteAppState() {
+	if err := os.Remove(filepath.Join(ConfigDir, "config.json")); err != nil {
+		log.Fatalf("Failed to delete config: %v", err)
+	}
+
+	if err := os.Remove(filepath.Join(ConfigDir, "state.json")); err != nil {
+		log.Fatalf("Failed to delete config: %v", err)
 	}
 }
 
@@ -155,7 +165,7 @@ func InitLogging() {
 		tint.NewHandler(os.Stderr, &tint.Options{
 			Level:      slog.LevelDebug,
 			TimeFormat: time.RFC822,
-			NoColor: !isatty.IsTerminal(os.Stderr.Fd()),
+			NoColor:    !isatty.IsTerminal(os.Stderr.Fd()),
 		}),
 	))
 }

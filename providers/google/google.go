@@ -125,7 +125,11 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 		log.Fatal("Unable to read", err)
 	}
 
-	decrypted := decryptBytes(encrypted)
+	decrypted, err := decryptBytes(encrypted)
+	if err != nil {
+		return nil, err
+	}
+
 	tok := &oauth2.Token{}
 	err = json.NewDecoder(bytes.NewReader(decrypted)).Decode(tok)
 	return tok, err
@@ -145,7 +149,11 @@ func saveToken(path string, token *oauth2.Token) {
 		log.Fatalf("Unable to encode token: %v", err)
 	}
 
-	encrypted := encryptBytes(bytes)
+	encrypted, err := encryptBytes(bytes)
+	if err != nil {
+		log.Fatal("Failed to encrypt token", err)
+	}
+
 	f.Write(encrypted)
 }
 
@@ -188,43 +196,44 @@ func authCallback(quit chan bool, result chan string) {
 	}
 }
 
-func encryptBytes(msg []byte) []byte {
+func encryptBytes(msg []byte) ([]byte, error) {
 	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
 	nonce := make([]byte, aead.NonceSize(), aead.NonceSize()+len(msg)+aead.Overhead())
 	if _, err := rand.Read(nonce); err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
-	return aead.Seal(nonce, nonce, msg, nil)
+	return aead.Seal(nonce, nonce, msg, nil), nil
 }
 
-func decryptBytes(encrypted []byte) []byte {
+func decryptBytes(encrypted []byte) ([]byte, error) {
 	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
 	if len(encrypted) < aead.NonceSize() {
-		log.Panic("Ciphertext too short")
+		return nil, err
 	}
 
 	nonce, ciphertext := encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():]
 
 	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
-	return plaintext
+	return plaintext, nil
 }
 
 func (p GoogleProvider) GetAttachments(after time.Time, deleteFetched bool) []*os.File {
 	user := "me"
 	query := createQuery(after)
 
+	slog.Debug("Querying gmail", "query", query)
 	r, err := p.srv.Users.Messages.List(user).LabelIds("INBOX").Q(query).Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve labels: %v", err)
@@ -278,12 +287,12 @@ func (p GoogleProvider) parseAttachments(message *gmail.Message, deleteAfterFetc
 }
 
 func createQuery(after time.Time) string {
-	str := fmt.Sprintf("after:%v", after.Unix())
+	str := fmt.Sprintf("after:%v ", after.Unix())
 	for idx, sender := range common.GlobalConfig.AllowedSenders {
 		if idx > 0 {
-			str += "OR "
+			str += " OR "
 		}
-		str += fmt.Sprintf("from:(%v) ", sender)
+		str += fmt.Sprintf("from:(%v)", sender)
 	}
 
 	return str
