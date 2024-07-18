@@ -79,10 +79,11 @@ func getClient(config *oauth2.Config) *http.Client {
 	// time.
 	tokFile := filepath.Join(common.ConfigDir, "token.json")
 	tok, err := tokenFromFile(tokFile)
-	if err != nil {
+	if err != nil || tok.Expiry.Before(time.Now().UTC()) {
 		tok = getTokenFromWeb(config)
 		saveToken(tokFile, tok)
 	}
+
 	return config.Client(context.Background(), tok)
 }
 
@@ -132,7 +133,7 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 
 // Saves a token to a file path.
 func saveToken(path string, token *oauth2.Token) {
-	fmt.Printf("Saving credential file to: %s\n", path)
+	slog.Info("\nSaving credential file", "path", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Fatalf("Unable to cache oauth token: %v", err)
@@ -220,7 +221,7 @@ func decryptBytes(encrypted []byte) []byte {
 	return plaintext
 }
 
-func (p GoogleProvider) GetAttachments(after time.Time) []*os.File {
+func (p GoogleProvider) GetAttachments(after time.Time, deleteFetched bool) []*os.File {
 	user := "me"
 	r, err := p.srv.Users.Messages.List(user).LabelIds("INBOX").Q("from:(sundoesdevelopment@gmail.com)").Do()
 	if err != nil {

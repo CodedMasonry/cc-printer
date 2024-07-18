@@ -20,7 +20,7 @@ func main() {
 	slog.Info("State successfully initialized", "ConfigDir", common.ConfigDir)
 
 	provider := fetchProvider(common.GlobalConfig.Provider)
-	result := provider.GetAttachments(common.GlobalState.LastFetch)
+	result := provider.GetAttachments(common.GlobalState.LastFetch, common.GlobalConfig.DeletePrinted)
 	for _, file := range result {
 		slog.Info("Attachment Downloaded", "file", file.Name())
 	}
