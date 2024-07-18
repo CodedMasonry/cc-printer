@@ -223,7 +223,9 @@ func decryptBytes(encrypted []byte) []byte {
 
 func (p GoogleProvider) GetAttachments(after time.Time, deleteFetched bool) []*os.File {
 	user := "me"
-	r, err := p.srv.Users.Messages.List(user).LabelIds("INBOX").Q("from:(sundoesdevelopment@gmail.com)").Do()
+	query := createQuery(after)
+
+	r, err := p.srv.Users.Messages.List(user).LabelIds("INBOX").Q(query).Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve labels: %v", err)
 	}
@@ -234,12 +236,12 @@ func (p GoogleProvider) GetAttachments(after time.Time, deleteFetched bool) []*o
 		if err != nil {
 			log.Fatalf("Unable to retrieve message: %v: %v\n", msg.Id, err)
 		}
-		files = slices.Concat(files, p.parseAttachments(message))
+		files = slices.Concat(files, p.parseAttachments(message, deleteFetched))
 	}
 	return files
 }
 
-func (p GoogleProvider) parseAttachments(message *gmail.Message) []*os.File {
+func (p GoogleProvider) parseAttachments(message *gmail.Message, deleteAfterFetch bool) []*os.File {
 	files := make([]*os.File, 0)
 	for _, part := range message.Payload.Parts {
 		if part.Filename != "" && part.Body != nil && part.Body.AttachmentId != "" {
@@ -269,7 +271,22 @@ func (p GoogleProvider) parseAttachments(message *gmail.Message) []*os.File {
 		}
 	}
 
+	if deleteAfterFetch {
+		p.srv.Users.Messages.Trash("me", message.Id).Do()
+	}
 	return files
+}
+
+func createQuery(after time.Time) string {
+	str := fmt.Sprintf("after:%v", after.Unix())
+	for idx, sender := range common.GlobalConfig.AllowedSenders {
+		if idx > 0 {
+			str += "OR "
+		}
+		str += fmt.Sprintf("from:(%v) ", sender)
+	}
+
+	return str
 }
 
 // Parses a file name (Ex: something.png) to a file type (Ex: png)

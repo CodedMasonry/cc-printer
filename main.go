@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"log/slog"
+	"time"
 
 	"github.com/CodedMasonry/cc-printer/common"
 	"github.com/CodedMasonry/cc-printer/providers"
@@ -20,9 +21,16 @@ func main() {
 	slog.Info("State successfully initialized", "ConfigDir", common.ConfigDir)
 
 	provider := fetchProvider(common.GlobalConfig.Provider)
-	result := provider.GetAttachments(common.GlobalState.LastFetch, common.GlobalConfig.DeletePrinted)
-	for _, file := range result {
-		slog.Info("Attachment Downloaded", "file", file.Name())
+	for {
+		slog.Debug("Fetching provider for files")
+		result := provider.GetAttachments(common.GlobalState.LastFetch, common.GlobalConfig.DeletePrinted)
+		slog.Debug("Finished fetching", "number of files", len(result))
+
+		for _, file := range result {
+			slog.Info("Attachment Downloaded", "file", file.Name())
+		}
+
+		common.GlobalState.LastFetch = time.Now().UTC()
 	}
 }
 
