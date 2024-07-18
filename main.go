@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/CodedMasonry/cc-printer/common"
-	//"github.com/CodedMasonry/cc-printer/printer"
+	"github.com/CodedMasonry/cc-printer/printer"
 	"github.com/CodedMasonry/cc-printer/providers"
 	"github.com/CodedMasonry/cc-printer/providers/google"
 )
@@ -37,7 +37,7 @@ func main() {
 
 		for _, file := range result {
 			slog.Info("Attachment Downloaded", "file", file.Name())
-			//printer.PrintFile(file)
+			printer.PrintFile(file)
 		}
 
 		common.GlobalState.LastFetch = time.Now().UTC()
