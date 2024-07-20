@@ -245,12 +245,19 @@ func (p GoogleProvider) GetAttachments(after time.Time, deleteFetched bool) []*o
 		if err != nil {
 			log.Fatalf("Unable to retrieve message: %v: %v\n", msg.Id, err)
 		}
-		files = slices.Concat(files, p.parseAttachments(message, deleteFetched))
+		files = slices.Concat(files, p.parseAttachments(message))
+
+		if deleteFetched {
+			if _, err := p.srv.Users.Messages.Trash("me", message.Id).Do(); err != nil {
+				slog.Error("Failed to delete message", "messageId", message.Id, "error", err)
+			}
+		}
 	}
+
 	return files
 }
 
-func (p GoogleProvider) parseAttachments(message *gmail.Message, deleteAfterFetch bool) []*os.File {
+func (p GoogleProvider) parseAttachments(message *gmail.Message) []*os.File {
 	files := make([]*os.File, 0)
 	for _, part := range message.Payload.Parts {
 		if part.Filename != "" && part.Body != nil && part.Body.AttachmentId != "" {
@@ -280,9 +287,6 @@ func (p GoogleProvider) parseAttachments(message *gmail.Message, deleteAfterFetc
 		}
 	}
 
-	if deleteAfterFetch {
-		p.srv.Users.Messages.Trash("me", message.Id).Do()
-	}
 	return files
 }
 
