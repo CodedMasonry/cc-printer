@@ -1,0 +1,11 @@
+[Unit]
+Description=Printer Service for printing files from an email account
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/cc-printer
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
