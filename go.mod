@@ -9,7 +9,12 @@ require (
 	google.golang.org/api v0.187.0
 )
 
-require github.com/joho/godotenv v1.5.1 // indirect
+require (
+	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
+)
 
 require (
 	cloud.google.com/go/auth v0.6.1 // indirect
@@ -26,6 +31,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.5 // indirect
 	github.com/lmittmann/tint v1.0.4 // indirect
 	github.com/mattn/go-isatty v0.0.20
+	github.com/urfave/cli/v2 v2.27.2
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
 	go.opentelemetry.io/otel v1.28.0 // indirect

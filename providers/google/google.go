@@ -59,6 +59,7 @@ func AuthenticateUser() *gmail.Service {
 		RedirectURL:  "http://localhost:8080" + GoogleCallbackURL,
 		Scopes: []string{
 			gmail.GmailReadonlyScope,
+			gmail.GmailModifyScope,
 		},
 	}
 
