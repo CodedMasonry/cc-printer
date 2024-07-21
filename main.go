@@ -42,7 +42,7 @@ func main() {
 
 		common.GlobalState.LastFetch = time.Now().UTC()
 		go common.GlobalState.SaveToFile()
-		time.Sleep(5 * time.Minute)
+		time.Sleep(1 * time.Minute)
 	}
 }
 
