@@ -80,7 +80,8 @@ func getClient(config *oauth2.Config) *http.Client {
 	// time.
 	tokFile := filepath.Join(common.ConfigDir, "token.json")
 	tok, err := tokenFromFile(tokFile)
-	if err != nil || tok.Expiry.Before(time.Now().UTC()) {
+	if err != nil {
+		slog.Error("Failed to get token from file", "error", err)
 		tok = getTokenFromWeb(config)
 		saveToken(tokFile, tok)
 	}
