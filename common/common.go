@@ -161,9 +161,16 @@ func genEncryptionKey() []byte {
 }
 
 func InitLogging() {
+	var level slog.Level
+	if IsProduction {
+		level = slog.LevelInfo
+	} else {
+		level = slog.LevelDebug
+	}
+
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stderr, &tint.Options{
-			Level:      slog.LevelDebug,
+			Level:      level,
 			TimeFormat: time.RFC822,
 			NoColor:    !isatty.IsTerminal(os.Stderr.Fd()),
 		}),

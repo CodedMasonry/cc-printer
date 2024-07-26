@@ -8,6 +8,7 @@ set +a
 go build -ldflags "\
 -X 'github.com/CodedMasonry/cc-printer/providers/google.GoogleClientID=$GOOGLE_CLIENT_ID' \
 -X 'github.com/CodedMasonry/cc-printer/providers/google.GoogleClientSecret=$GOOGLE_CLIENT_SECRET'\
+-X 'github.com/CodedMasonry/cc-printer/common.IsProduction=$IS_PRODUCTION'\
 "
 
 echo "Build successful"
