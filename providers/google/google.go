@@ -292,17 +292,9 @@ func (p GoogleProvider) parseAttachments(message *gmail.Message) []*os.File {
 	return files
 }
 
-func createQuery(after time.Time, deletePrinted bool) string {
-	var afterAdjusted int64
-	if deletePrinted {
-		// Subtract 5 minutes in case failed catch recent emails
-		afterAdjusted = after.Unix() - int64(time.Minute*5)
-	} else {
-		// Subtract 30 seconds to reduce chance of fail
-		afterAdjusted = after.Unix() - 30
-	}
+func createQuery(after time.Time) string {
 
-	str := fmt.Sprintf("after:%v ", afterAdjusted)
+	str := fmt.Sprintf("after:%v ", after.Unix())
 	for idx, sender := range common.GlobalConfig.AllowedSenders {
 		if idx > 0 {
 			str += " OR "

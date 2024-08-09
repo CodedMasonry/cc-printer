@@ -137,7 +137,7 @@ func FetchState() *State {
 
 func initState() *State {
 	return &State{
-		LastFetch:     time.Unix(1,0),
+		LastFetch:     time.Unix(946758350, 0),
 		EncryptionKey: genEncryptionKey(),
 	}
 }

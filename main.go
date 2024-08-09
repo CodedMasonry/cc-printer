@@ -34,7 +34,6 @@ func main() {
 	for {
 		slog.Debug("Fetching files", "last", common.GlobalState.LastFetch)
 		result := provider.GetAttachments(common.GlobalState.LastFetch, common.GlobalConfig.DeletePrinted)
-		slog.Debug("Finished fetching", "files", len(result))
 
 		for _, file := range result {
 			slog.Info("Attachment Downloaded", "file", file.Name())
