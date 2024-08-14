@@ -247,7 +247,11 @@ func (p GoogleProvider) parseAttachments(message *gmail.Message) []*os.File {
 	return files
 }
 
-func createQuery(after time.Time) string {
+func createQuery(after time.Time, deleteFetched bool) string {
+
+	if deleteFetched {
+		after = after.Add(-5 * time.Minute)
+	}
 
 	str := fmt.Sprintf("after:%v ", after.Unix())
 	for idx, sender := range common.GlobalConfig.AllowedSenders {
