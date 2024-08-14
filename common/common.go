@@ -160,6 +160,41 @@ func genEncryptionKey() []byte {
 	return bytes
 }
 
+/*
+func encryptBytes(msg []byte) ([]byte, error) {
+	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, aead.NonceSize(), aead.NonceSize()+len(msg)+aead.Overhead())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, err
+	}
+
+	return aead.Seal(nonce, nonce, msg, nil), nil
+}
+
+func decryptBytes(encrypted []byte) ([]byte, error) {
+	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(encrypted) < aead.NonceSize() {
+		return nil, err
+	}
+
+	nonce, ciphertext := encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():]
+
+	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
+}
+*/
+
 func InitLogging() {
 	var level slog.Level
 	if IsProduction {

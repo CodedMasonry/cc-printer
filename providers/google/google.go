@@ -3,7 +3,6 @@ package google
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -17,7 +16,6 @@ import (
 	"time"
 
 	"github.com/CodedMasonry/cc-printer/common"
-	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
@@ -121,19 +119,14 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 		log.Fatal("unable to read token file", err)
 	}
 
-	encrypted := make([]byte, info.Size())
-	_, err = f.Read(encrypted)
+	data := make([]byte, info.Size())
+	_, err = f.Read(data)
 	if err != nil {
 		log.Fatal("Unable to read", err)
 	}
 
-	decrypted, err := decryptBytes(encrypted)
-	if err != nil {
-		return nil, err
-	}
-
 	tok := &oauth2.Token{}
-	err = json.NewDecoder(bytes.NewReader(decrypted)).Decode(tok)
+	err = json.NewDecoder(bytes.NewReader(data)).Decode(tok)
 	return tok, err
 }
 
@@ -151,12 +144,7 @@ func saveToken(path string, token *oauth2.Token) {
 		log.Fatalf("Unable to encode token: %v", err)
 	}
 
-	encrypted, err := encryptBytes(bytes)
-	if err != nil {
-		log.Fatal("Failed to encrypt token", err)
-	}
-
-	f.Write(encrypted)
+	f.Write(bytes)
 }
 
 func authInput(quit chan bool, result chan string) {
@@ -196,39 +184,6 @@ func authCallback(quit chan bool, result chan string) {
 	if err := server.Shutdown(ctx); err != nil {
 		slog.Error("Failed to shutdown authentication callback", "error", err)
 	}
-}
-
-func encryptBytes(msg []byte) ([]byte, error) {
-	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
-	if err != nil {
-		return nil, err
-	}
-
-	nonce := make([]byte, aead.NonceSize(), aead.NonceSize()+len(msg)+aead.Overhead())
-	if _, err := rand.Read(nonce); err != nil {
-		return nil, err
-	}
-
-	return aead.Seal(nonce, nonce, msg, nil), nil
-}
-
-func decryptBytes(encrypted []byte) ([]byte, error) {
-	aead, err := chacha20poly1305.NewX(common.GlobalState.EncryptionKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(encrypted) < aead.NonceSize() {
-		return nil, err
-	}
-
-	nonce, ciphertext := encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():]
-
-	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, err
-	}
-	return plaintext, nil
 }
 
 func (p GoogleProvider) GetAttachments(after time.Time, deleteFetched bool) []*os.File {
