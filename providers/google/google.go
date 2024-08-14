@@ -3,6 +3,7 @@ package google
 import (
 	"bytes"
 	"context"
+	"crypto/des"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -188,7 +189,7 @@ func authCallback(quit chan bool, result chan string) {
 
 func (p GoogleProvider) GetAttachments(after time.Time, deleteFetched bool) []*os.File {
 	user := "me"
-	query := createQuery(after)
+	query := createQuery(after, deleteFetched)
 
 	slog.Debug("Querying gmail", "query", query)
 	r, err := p.srv.Users.Messages.List(user).LabelIds("INBOX").Q(query).Do()
