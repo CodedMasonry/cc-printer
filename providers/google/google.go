@@ -251,12 +251,12 @@ func (p GoogleProvider) parseAttachments(message *gmail.Message) []*os.File {
 }
 
 func createQuery(after time.Time, deleteFetched bool) string {
-
-	if deleteFetched {
-		after = after.Add(-5 * time.Minute)
+	str := ""
+	if !deleteFetched {
+		str = fmt.Sprintf("after:%v ", after.Unix())
+		after = after.Add(-45 * time.Second)
 	}
-
-	str := fmt.Sprintf("after:%v ", after.Unix())
+	
 	for idx, sender := range common.GlobalConfig.AllowedSenders {
 		if idx > 0 {
 			str += " OR "
