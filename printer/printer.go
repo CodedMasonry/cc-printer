@@ -13,7 +13,7 @@ import (
 func PrintFile(file *os.File) {
 	args := common.GlobalConfig.PrintFlags
 	if common.GlobalConfig.Printer != "default" {
-		args = append(args, "-d", common.GlobalConfig.Printer)
+		args = append(args, "-d ", common.GlobalConfig.Printer)
 	}
 
 	args = append(args, file.Name())
