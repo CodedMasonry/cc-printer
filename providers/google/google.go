@@ -126,6 +126,9 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 	}
 
 	tok := &oauth2.Token{}
+	if tok.RefreshToken == "" {
+		slog.Error("No refresh token provided. Disconnect 'The Shaffer Group' from the email and re-authenticate")
+	}
 	err = json.NewDecoder(bytes.NewReader(data)).Decode(tok)
 	return tok, err
 }
