@@ -37,8 +37,7 @@ func main() {
 
 		for _, file := range result {
 			slog.Info("Attachment Downloaded", "file", file.Name())
-			go printer.PrintFile(file)
-			time.Sleep(1 * time.Second)
+			printer.PrintFile(file)
 		}
 
 		common.GlobalState.LastFetch = time.Now().UTC()
