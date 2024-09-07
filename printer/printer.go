@@ -13,7 +13,7 @@ import (
 func PrintFile(file *os.File) {
 	args := common.GlobalConfig.PrintFlags
 	if common.GlobalConfig.Printer != "default" {
-		args = append(args, "-d ", common.GlobalConfig.Printer)
+		args = append(args, "-d", common.GlobalConfig.Printer)
 	}
 
 	args = append(args, file.Name())
@@ -26,8 +26,8 @@ func PrintFile(file *os.File) {
 		} else {
 			fmt.Println("Failed to print; Make sure the printer in the config is correct & is online")
 		}
-        log.Fatal("Failed to print file, ", err)
-    }
-	
+		log.Fatal("Failed to print file, ", err)
+	}
+
 	slog.Info("Added file to print queue", "printer", common.GlobalConfig.Printer)
 }
