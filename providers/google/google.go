@@ -126,9 +126,11 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 	}
 
 	tok := &oauth2.Token{}
-	if tok.RefreshToken == "" {
-		slog.Error("No refresh token provided. Disconnect 'The Shaffer Group' from the email and re-authenticate", "reset_url", "https://myaccount.google.com/connections")
-	}
+	/*
+		if tok.RefreshToken == "" {
+			slog.Error("No refresh token provided. Disconnect 'The Shaffer Group' from the email and re-authenticate", "reset_url", "https://myaccount.google.com/connections")
+		}
+	*/
 	err = json.NewDecoder(bytes.NewReader(data)).Decode(tok)
 	return tok, err
 }
@@ -256,7 +258,7 @@ func createQuery(after time.Time, deleteFetched bool) string {
 		str = fmt.Sprintf("after:%v ", after.Unix())
 		after = after.Add(-45 * time.Second)
 	}
-	
+
 	for idx, sender := range common.GlobalConfig.AllowedSenders {
 		if idx > 0 {
 			str += " OR "
