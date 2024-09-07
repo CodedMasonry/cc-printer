@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/CodedMasonry/cc-printer/common"
 )
@@ -19,7 +20,7 @@ func PrintFile(file *os.File) {
 	args = append(args, file.Name())
 
 	slog.Debug("Printing Details", "args", args)
-	_, err := exec.Command("lp", args...).Output()
+	_, err := exec.Command("lp", strings.Join(args, " ")).Output()
 	if err != nil {
 		if common.GlobalConfig.Printer == "default" {
 			fmt.Println("Make sure you set a default printer or\nedit the 'Printer' in the config to the printer you wish to use")
