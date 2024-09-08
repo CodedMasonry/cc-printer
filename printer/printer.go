@@ -6,18 +6,17 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/CodedMasonry/cc-printer/common"
 )
 
-func PrintFile(file string) {
+func PrintFile(file *os.File) {
 	args := common.GlobalConfig.PrintFlags
 	if common.GlobalConfig.Printer != "default" {
 		args = append(args, "-d", common.GlobalConfig.Printer)
 	}
 
-	args = append(args, file)
+	args = append(args, file.Name())
 
 	slog.Debug("Printing Details", "args", args)
 	out, err := exec.Command("lp", args...).Output()
@@ -32,15 +31,4 @@ func PrintFile(file string) {
 	}
 
 	slog.Info("Added file to print queue", "printer", common.GlobalConfig.Printer)
-}
-
-func Rasterize(orig *os.File) string {
-	out := strings.TrimSuffix(orig.Name(), ".pdf")
-	out = out + ".png"
-	_, err := exec.Command("convert", "-density 600", orig.Name(), out).Output()
-	if err != nil {
-		slog.Error("Failed to rasterize PDF", "error", err)
-	}
-	os.Remove(orig.Name())
-	return out
 }
