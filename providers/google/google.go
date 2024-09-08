@@ -235,7 +235,7 @@ func (p GoogleProvider) parseAttachments(message *gmail.Message) []*os.File {
 				continue
 			}
 
-			f, err := os.CreateTemp("", "*."+nameToType(part.Filename))
+			f, err := os.CreateTemp("", "*_print."+nameToType(part.Filename))
 			if err != nil {
 				log.Fatalf("Unable to save temporary file: %v", err)
 			}

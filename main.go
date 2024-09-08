@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/CodedMasonry/cc-printer/common"
@@ -37,7 +38,11 @@ func main() {
 
 		for _, file := range result {
 			slog.Info("Attachment Downloaded", "file", file.Name())
-			printer.PrintFile(file)
+			if strings.HasSuffix(file.Name(), "pdf") {
+				name := printer.Rasterize(file)
+				printer.PrintFile(name)
+			}
+			printer.PrintFile(file.Name())
 		}
 
 		common.GlobalState.LastFetch = time.Now().UTC()
