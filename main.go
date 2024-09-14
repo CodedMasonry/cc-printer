@@ -10,6 +10,7 @@ import (
 	"github.com/CodedMasonry/cc-printer/printer"
 	"github.com/CodedMasonry/cc-printer/providers"
 	"github.com/CodedMasonry/cc-printer/providers/google"
+	"github.com/CodedMasonry/cc-printer/providers/protonmail"
 )
 
 func main() {
@@ -56,6 +57,8 @@ func fetchProvider(provider string) providers.Provider {
 	switch provider {
 	case "google":
 		return google.InitProvider(common.GlobalConfig.DeletePrinted, common.GlobalConfig.AllowedSenders)
+	case "protonmail":
+		return protonmail.InitProvider(common.GlobalConfig.AllowedSenders)
 	default:
 		log.Fatal("Unknown or Unsupported provider: ", provider)
 	}

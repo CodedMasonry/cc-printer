@@ -13,4 +13,5 @@ type Provider interface {
 
 var ProviderList = []string {
 	"google",
+	"protonmail",
 }
